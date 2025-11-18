@@ -256,6 +256,11 @@ config TARGET_SMARC_RZG3E
 	help
           Support for Renesas RZ/G3E Dev Platform
 
+config TARGET_RZG3E_EA_SOM
+	bool "Embedded Artists RZ/G3E SOM"
+	help
+          Support for Embedded Artists RZ/G3E SOM
+
 endchoice
 
 source "board/renesas/condor/Kconfig"
@@ -275,6 +280,7 @@ source "board/renesas/rzg2lc-dev/Kconfig"
 source "board/renesas/rzg2ul-dev/Kconfig"
 source "board/renesas/rzv2h-dev/Kconfig"
 source "board/renesas/rzg3e-dev/Kconfig"
+source "board/embeddedartists/rzg3e-ea-som/Kconfig"
 
 config MULTI_DTB_FIT_UNCOMPRESS_SZ
 	default 0x80000 if TARGET_BEACON_RZG2M

@@ -1,0 +1,15 @@
+if TARGET_RZG3E_EA_SOM
+
+config SYS_SOC
+	default "renesas"
+
+config SYS_BOARD
+	default "rzg3e-ea-som"
+
+config SYS_VENDOR
+	default "embeddedartists"
+
+config SYS_CONFIG_NAME
+	default "rzg3e-ea-som"
+
+endif
