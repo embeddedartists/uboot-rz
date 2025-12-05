@@ -93,20 +93,6 @@
 		states = <3300000 0 1800000 1>;
 	};
 
-	/*gpio-leds {
-		compatible = "gpio-leds";
-		pinctrl-0 = <&onboard_pcie_pins>;
-		pinctrl-names = "default";
-
-		led-0 {
-			gpios = <174 GPIO_ACTIVE_HIGH>;
-			default-state = "on";
-		};
-		led-1 {
-			gpios = <201 GPIO_ACTIVE_HIGH>;
-			default-state = "on";
-		};
-	};*/
 };
 
 &pinctrl {
@@ -129,16 +115,12 @@
 		};
 
 		sd1_ctrl {
-			pinmux = <RZV2H_PINMUX(G, 0, 1)>, /* QSD2_CLK */
-				 <RZV2H_PINMUX(G, 1, 1)>; /* QSD2_CMD */
+			pinmux = <RZV2H_PINMUX(G, 0, 1)>, /* QSD1_CLK */
+				 <RZV2H_PINMUX(G, 1, 1)>; /* QSD1_CMD */
 		};
 	};
 
 	sdhi2_pins: sd2 {
-		sd2_mux {
-			pinmux = <RZV2H_PINMUX(K, 0, 1)>; /* QSD2_CD */
-		};
-
 		sd2_data {
 			pinmux = <RZV2H_PINMUX(H, 2, 1)>, /* QSD2_DAT0 */
 				 <RZV2H_PINMUX(H, 3, 1)>, /* QSD2_DAT1 */
@@ -197,24 +179,6 @@
 		pinmux = <RZV2H_PINMUX(3, 4, 4)>, /* SCL8 */
 			 <RZV2H_PINMUX(3, 5, 4)>; /* SDA8 */
 	};
-
-	/*onboard_pcie_pins: onbpins {
-		pinmux = <RZV2H_PINMUX(L, 6, 0)>, / * PL6 * /
-			 <RZV2H_PINMUX(L, 7, 0)>; / * PL7 * /
-	};*/
-
-	/*hog_M1_PCIE_RST_N_1V8 { / * PL6 - M1_PCIE_RST_N_1V8 * /
-		gpio-hog;
-		gpios = <174 GPIO_ACTIVE_LOW>;
-		output-high;
-		line-name = "M1_PCIE_RST_N_1V8";
-	};
-	hog_M1_PWR_EN_1V8 { / * PL7 - M1_PWR_EN_1V8 * /
-		gpio-hog;
-		gpios = <175 GPIO_ACTIVE_LOW>;
-		output-high;
-		line-name = "M1_PWR_EN_1V8";
-	};*/
 };
 
 &P21 {
@@ -240,6 +204,7 @@
 	status = "okay";
 };
 
+/* eMMC */
 &sdhi0 {
 	pinctrl-0 = <&sdhi0_pins>;
 	pinctrl-names = "default";
@@ -265,6 +230,7 @@
 	status = "okay";
 };
 
+/* Either onboard 2FY or M.2 E-key on Carrier Board */
 &sdhi2 {
 	pinctrl-0 = <&sdhi2_pins>;
 	pinctrl-names = "default";

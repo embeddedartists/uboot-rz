@@ -53,11 +53,15 @@
 	"prodsdbootargs=setenv bootargs rw rootwait earlycon root=/dev/mmcblk1p2 \0" \
 	"prodemmcbootargs=setenv bootargs rw rootwait earlycon root=/dev/mmcblk0p2 \0" \
 	"bootimage=booti 0x48080000 - 0x48000000 \0" \
-	"emmcload=ext4load mmc 0:2 0x48080000 boot/Image;ext4load mmc 0:2 0x48000000 ${fdtfile};run prodemmcbootargs \0" \
-	"sd1load=ext4load mmc 1:2 0x48080000 boot/Image;ext4load mmc 1:2 0x48000000 ${fdtfile};run prodsdbootargs \0" \
-	"fdtfile=boot/rzg3e-ea-som-hdmi.dtb \0" \
+	"emmcload=ext4load mmc 0:2 0x48080000 boot/Image;ext4load mmc 0:2 0x48000000 ${fdt_file};run prodemmcbootargs \0" \
+	"sd1load=ext4load mmc 1:2 0x48080000 boot/Image;ext4load mmc 1:2 0x48000000 ${fdt_file};run prodsdbootargs \0" \
+	"fdt_file=boot/rzg3e-ea-som-hdmi.dtb \0" \
+	"enable_onoff_button=i2c dev 8;i2c mw 0x22 0x4d 0x08 0x01 \0" \
 	"bootcmd_check=if mmc dev 1; then run sd1load; else run emmcload; fi \0"
-#define CONFIG_BOOTCOMMAND      "run bootcmd_check;run bootimage"
+#define CONFIG_BOOTCOMMAND      "run enable_onoff_button;run bootcmd_check;run bootimage"
+
+/* The enable_onoff_button command above configure a 100kOhm PullUp on pin IO1_3
+ * of the onboard PCAL6524 to make the ONOFF button on the SOM Carrier Board work. */
 
 /* For board */
 /* Ethernet RAVB */

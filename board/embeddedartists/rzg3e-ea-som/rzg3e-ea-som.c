@@ -305,8 +305,6 @@ int board_late_init(void)
 	board_gpio_init_mkey();
 	board_gpio_init_ekey();
 	board_gpio_init_onboard_pcie();
-	//board_gpio_configure_pin_simple("gpio-216", "M1_PCIE_RST_N", 1);
-	//board_gpio_configure_pin_simple("gpio-217", "M1_PWR_EN_1V8", 1);
 
 	return 0;
 }
