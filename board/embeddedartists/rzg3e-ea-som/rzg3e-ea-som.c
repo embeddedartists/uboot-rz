@@ -177,110 +177,81 @@ static int board_gpio_configure_pin(const char* pin_name, const char* request_na
 	return ret;
 }
 
-static void board_gpio_configure_pin_simple(const char* pin_name, const char* request_name, int value)
-{
-	struct gpio_desc desc;
-	board_gpio_configure_pin(pin_name, request_name, value, &desc);
-}
-
 /* Control power and reset for onboard pcie
  * M1_PCIE_RST_N_1V8 - gpio PL6
  * M1_PWR_EN_1V8     - gpio PL7
- */
-static void board_gpio_init_onboard_pcie(void)
-{
-	int ret;
-	struct gpio_desc desc_M1_PCIE_RST_N_1V8;
-	struct gpio_desc desc_M1_PWR_EN_1V8;
-
-	do {
-		ret = board_gpio_configure_pin("gpio-216", "M1_PCIE_RST_N_1V8", 0, &desc_M1_PCIE_RST_N_1V8);
-		if (ret != 0) break;
-		ret = board_gpio_configure_pin("gpio-217", "M1_PWR_EN_1V8", 0, &desc_M1_PWR_EN_1V8);
-		if (ret != 0) break;
-		mdelay(500);
-		dm_gpio_set_value(&desc_M1_PWR_EN_1V8, 1);
-		mdelay(200);
-		dm_gpio_set_value(&desc_M1_PCIE_RST_N_1V8, 1);
-		mdelay(30);
-		dm_gpio_set_value(&desc_M1_PCIE_RST_N_1V8, 0);
-		mdelay(30);
-		dm_gpio_set_value(&desc_M1_PCIE_RST_N_1V8, 1);
-		printf("Initialized power and reset for onboard PCIe\n");
-	} while (0);
-	if (ret != 0) {
-		printf("Failed to initialize power and reset for onboard PCIe\n");
-	}
-}
-
-/* Control power and reset for m.2 m-key
- * M2BM_PWR_EN - i2c gpio (0x21) pin io2_1
- * M2M_PERST   - i2c gpio (0x21) pin io1_7
- */
-static void board_gpio_init_mkey(void)
-{
-	int ret;
-	struct gpio_desc desc_M2BM_PWR_EN;
-	struct gpio_desc desc_M2M_PERST;
-
-	do {
-		ret = board_gpio_configure_pin("gpio@21_17", "M2BM_PWR_EN", 0, &desc_M2BM_PWR_EN);
-		if (ret != 0) break;
-		ret = board_gpio_configure_pin("gpio@21_15", "M2M_PERST", 0, &desc_M2M_PERST);
-		if (ret != 0) break;
-		mdelay(500);
-		dm_gpio_set_value(&desc_M2BM_PWR_EN, 1);
-		mdelay(200);
-		dm_gpio_set_value(&desc_M2M_PERST, 1);
-		mdelay(30);
-		dm_gpio_set_value(&desc_M2M_PERST, 0);
-		mdelay(30);
-		dm_gpio_set_value(&desc_M2M_PERST, 1);
-		printf("Initialized power and reset for M.2 M-key\n");
-	} while (0);
-	if (ret != 0) {
-		printf("Failed to initialize power and reset for M.2 M-key\n");
-	}
-}
-
-/* Control power and reset for m.2 e-key
+ *
+ * Control power and reset for m.2 m-key
+ * M2BM_PWR_EN    - i2c gpio (0x21) pin io2_1   shared with b-key
+ * M2M_PERST      - i2c gpio (0x21) pin io1_7
+ *
+ * Control power and reset for m.2 e-key
  * M2E_PWR_EN     - i2c gpio (0x21) pin io1_2
  * M2E_PERST      - i2c gpio (0x21) pin io0_7
  * M2E_WL_REG_ON  - i2c gpio (0x21) pin io0_0
  * M2E_BT_REG_ON  - i2c gpio (0x21) pin io0_3
+ *
+ * Control power and reset for m.2 b-key
+ * M2BM_PWR_EN    - i2c gpio (0x21) pin io2_1   shared with m-key
+ * M2B_PERST      - i2c gpio (0x21) pin io1_6
+ * M2B_PWR_OFF    - i2c gpio (0x21) pin io1_3
+ * M2B_WDISABLE   - i2c gpio (0x21) pin io1_4
  */
-static void board_gpio_init_ekey(void)
+static void board_init_pcie_power_and_reset(void)
 {
 	int ret;
+	struct gpio_desc desc_M1_PCIE_RST_N_1V8;
+	struct gpio_desc desc_M1_PWR_EN_1V8;
+	struct gpio_desc desc_M2BM_PWR_EN;
+	struct gpio_desc desc_M2M_PERST;
 	struct gpio_desc desc_M2E_PWR_EN;
 	struct gpio_desc desc_M2E_PERST;
 	struct gpio_desc desc_M2E_WL_REG_ON;
 	struct gpio_desc desc_M2E_BT_REG_ON;
+	struct gpio_desc desc_M2B_PERST;
+	struct gpio_desc desc_M2B_PWR_OFF;
+	struct gpio_desc desc_M2B_WDISABLE;
 
 	do {
-		ret = board_gpio_configure_pin("gpio@21_10", "M2E_PWR_EN", 0, &desc_M2E_PWR_EN);
-		if (ret != 0) break;
-		ret = board_gpio_configure_pin("gpio@21_7", "M2E_PERST", 0, &desc_M2E_PERST);
-		if (ret != 0) break;
-		ret = board_gpio_configure_pin("gpio@21_0", "M2E_WL_REG_ON", 0, &desc_M2E_WL_REG_ON);
-		if (ret != 0) break;
-		ret = board_gpio_configure_pin("gpio@21_3", "M2E_BT_REG_ON", 0, &desc_M2E_BT_REG_ON);
-		if (ret != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio-216", "M1_PCIE_RST_N_1V8", 0, &desc_M1_PCIE_RST_N_1V8)) != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio-217", "M1_PWR_EN_1V8", 0, &desc_M1_PWR_EN_1V8)) != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio@21_17", "M2BM_PWR_EN", 0, &desc_M2BM_PWR_EN)) != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio@21_15", "M2M_PERST", 0, &desc_M2M_PERST)) != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio@21_10", "M2E_PWR_EN", 0, &desc_M2E_PWR_EN)) != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio@21_7", "M2E_PERST", 0, &desc_M2E_PERST)) != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio@21_0", "M2E_WL_REG_ON", 0, &desc_M2E_WL_REG_ON)) != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio@21_3", "M2E_BT_REG_ON", 0, &desc_M2E_BT_REG_ON)) != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio@21_14", "M2B_PERST", 0, &desc_M2B_PERST)) != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio@21_11", "M2B_PWR_OFF", 0, &desc_M2B_PWR_OFF)) != 0) break;
+		if ((ret = board_gpio_configure_pin("gpio@21_12", "WDISABLE", 0, &desc_M2B_WDISABLE)) != 0) break;
 		mdelay(500);
+		dm_gpio_set_value(&desc_M1_PWR_EN_1V8, 1);
+		dm_gpio_set_value(&desc_M2BM_PWR_EN, 1);
 		dm_gpio_set_value(&desc_M2E_PWR_EN, 1);
 		mdelay(100);
 		dm_gpio_set_value(&desc_M2E_WL_REG_ON, 1);
 		dm_gpio_set_value(&desc_M2E_BT_REG_ON, 1);
+		dm_gpio_set_value(&desc_M2B_PWR_OFF, 1);
+		dm_gpio_set_value(&desc_M2B_WDISABLE, 1);
 		mdelay(100);
+		dm_gpio_set_value(&desc_M1_PCIE_RST_N_1V8, 1);
+		dm_gpio_set_value(&desc_M2M_PERST, 1);
 		dm_gpio_set_value(&desc_M2E_PERST, 1);
+		dm_gpio_set_value(&desc_M2B_PERST, 1);
 		mdelay(30);
+		dm_gpio_set_value(&desc_M1_PCIE_RST_N_1V8, 0);
+		dm_gpio_set_value(&desc_M2M_PERST, 0);
 		dm_gpio_set_value(&desc_M2E_PERST, 0);
+		dm_gpio_set_value(&desc_M2B_PERST, 0);
 		mdelay(30);
+		dm_gpio_set_value(&desc_M1_PCIE_RST_N_1V8, 1);
+		dm_gpio_set_value(&desc_M2M_PERST, 1);
 		dm_gpio_set_value(&desc_M2E_PERST, 1);
-		printf("Initialized power and reset for M.2 E-key\n");
+		dm_gpio_set_value(&desc_M2B_PERST, 1);
+		printf("Initialized power and reset for PCIe\n");
 	} while (0);
 	if (ret != 0) {
-		printf("Failed to initialize power and reset for M.2 E-key\n");
+		printf("Failed to initialize power and reset for PCIe\n");
 	}
 }
 
@@ -302,9 +273,7 @@ int board_late_init(void)
 
 	/* The first access of an I2C-gpio fail so we delay */
 	mdelay(500);
-	board_gpio_init_mkey();
-	board_gpio_init_ekey();
-	board_gpio_init_onboard_pcie();
+	board_init_pcie_power_and_reset();
 
 	return 0;
 }
