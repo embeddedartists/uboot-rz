@@ -104,6 +104,11 @@ void s_init(void)
 	*(volatile u32 *)PFC(H) = 0x00111111;
 	*(volatile u8 *)PMC(H)  = 0x3f;
 
+	/* Get PL6 & PL7 to work as gpios */
+	*(volatile u8 *)PMC(L) &= ~(BIT(6) | BIT(7)); /* PL_6, PL_7 */
+	*(volatile u8 *)P(L) &= ~(BIT(6) | BIT(7)); /* PL_6 = 0, PL_7 = 0 */
+	*(volatile u16 *)PM(L) = (*(volatile u16 *)PM(L) & ~GENMASK(15, 12)) | BIT(13) | BIT(15); /* PL_6, PL_7 output */
+
 	/* ETH0 */
 	*(volatile u8 *)PMC(A)  = 0x0f;
 	*(volatile u32 *)PFC(A) = 0x00001111;

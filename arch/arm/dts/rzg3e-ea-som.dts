@@ -181,21 +181,6 @@
 	};
 };
 
-&P21 {
-	hog_M1_PCIE_RST_N_1V8 {  /* PL6 - M1_PCIE_RST_N_1V8 */
-		gpio-hog;
-		gpios = <6 GPIO_ACTIVE_LOW>;
-		output-high;
-		line-name = "M1_PCIE_RST_N_1V8";
-	};
-	hog_M1_PWR_EN_1V8 {  /* PL7 - M1_PWR_EN_1V8 */
-		gpio-hog;
-		gpios = <7 GPIO_ACTIVE_LOW>;
-		output-high;
-		line-name = "M1_PWR_EN_1V8";
-	};
-};
-
 &extal_clk {
 	clock-frequency = <24000000>;
 };
