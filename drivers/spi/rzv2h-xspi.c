@@ -460,7 +460,7 @@ static int xspi_probe(struct udevice *dev)
 
 	priv->regs = plat->regs;
 	priv->extr = plat->extr;
-#if CONFIG_IS_ENABLED(CLK)
+#if CONFIG_IS_ENABLED(CLK) && !defined(CONFIG_R9A09G057)
 	clk_enable(&priv->clk);
 #endif
 	return 0;
@@ -473,7 +473,7 @@ static int xspi_of_to_plat(struct udevice *bus)
 	plat->regs = dev_read_addr_index(bus, 0);
 	plat->extr = dev_read_addr_index(bus, 1);
 
-#if CONFIG_IS_ENABLED(CLK)
+#if CONFIG_IS_ENABLED(CLK) && !defined(CONFIG_R9A09G057) && !defined(CONFIG_R9A09G077) && !defined(CONFIG_R9A09G087)
 	struct xspi_priv *priv = dev_get_priv(bus);
 	int ret;
 
@@ -498,7 +498,14 @@ static const struct dm_spi_ops xspi_ops = {
 
 static const struct udevice_id xspi_ids[] = {
 	{ .compatible = "renesas,xspi-r9a09g057" },
+	{ .compatible = "renesas,xspi-r9a09g056" },
 	{ .compatible = "renesas,xspi-r9a09g047" },
+	{ .compatible = "renesas,r9a09g057-xspi" },
+	{ .compatible = "renesas,xspi-r9a08g045" },
+	{ .compatible = "renesas,xspi-r9a08g046" },
+	{ .compatible = "renesas,xspi-r9a09g047" },
+	{ .compatible = "renesas,t2h-xspi-if" },
+	{ .compatible = "renesas,n2h-xspi-if" },
 	{ }
 };
 

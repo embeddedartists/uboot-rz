@@ -90,6 +90,21 @@ config R9A09G047
 
 config R9A09G057
 	bool "Renesas SoC RZ/V2H"
+	imply CLK_R9A09G057
+
+config R9A09G056
+	bool "Renesas SoC RZ/V2N"
+
+config R9A08G045S
+	bool "Renesas SoC RZ/G3S"
+
+config R9A08G046
+	bool "Renesas SoC RZ/G3L"
+config R9A09G077
+	bool "Renesas SoC RZ/T2H"
+
+config R9A09G087
+        bool "Renesas SoC RZ/N2H"
 
 endmenu
 
@@ -241,6 +256,16 @@ config TARGET_RZV2H_DEV
 	help
           Support for Renesas RZ/V2H Dev Platform
 
+config TARGET_RZV2N_DEV
+	bool "RZ/V2N Dev board"
+	help
+          Support for Renesas RZ/V2N Dev Platform
+
+config TARGET_RZV2N_EVK
+	bool "RZ/V2N EVK board"
+	help
+          Support for Renesas RZ/V2N EVK Platform
+
 config TARGET_RZV2H_EVK_ALPHA
 	bool "RZ/V2H EVK Alpha board"
 	help
@@ -260,6 +285,38 @@ config TARGET_RZG3E_EA_SOM
 	bool "Embedded Artists RZ/G3E SOM"
 	help
           Support for Embedded Artists RZ/G3E SOM
+config TARGET_RZG3S_DEV
+	bool "RZ/G3S Dev board"
+	help
+          Support for Renesas RZ/G3S Dev Platform
+
+config TARGET_SMARC_RZG3S
+	bool "RZ/G3S SMARC board"
+	help
+          Support for Renesas RZ/G3S SMARC Platform
+config TARGET_RZV2H_EVK_VER1
+	bool "RZ/V2H EVK Version 1 board"
+	help
+	  Support for Renesas RZ/V2H Version 1 Platform
+
+config TARGET_RZG3L_DEV
+	bool "RZ/G3L Dev board"
+	help
+          Support for Renesas RZ/G3S Dev Platform
+
+config TARGET_SMARC_RZG3L
+	bool "RZ/G3L Dev board"
+	help
+          Support for Renesas RZ/G3L Dev Platform
+config TARGET_RZT2H_DEV
+	bool "RZ/T2H Dev board"
+	help
+          Support for Renesas RZ/T2H Dev Platform
+
+config TARGET_RZN2H_DEV
+        bool "RZ/N2H Dev board"
+        help
+          Support for Renesas RZ/N2H Dev Platform
 
 endchoice
 
@@ -280,6 +337,10 @@ source "board/renesas/rzg2lc-dev/Kconfig"
 source "board/renesas/rzg2ul-dev/Kconfig"
 source "board/renesas/rzv2h-dev/Kconfig"
 source "board/renesas/rzg3e-dev/Kconfig"
+source "board/renesas/rzg3s-dev/Kconfig"
+source "board/renesas/rzg3l-dev/Kconfig"
+source "board/renesas/rzt2h-dev/Kconfig"
+source "board/renesas/rzn2h-dev/Kconfig"
 source "board/embeddedartists/rzg3e-ea-som/Kconfig"
 
 config MULTI_DTB_FIT_UNCOMPRESS_SZ
@@ -296,5 +357,39 @@ config MULTI_DTB_FIT_USER_DEF_ADDR
 
 config DM_RESET
 	default y if RCAR_GEN3
+
+config RZG2L_DISTRO_BOOT
+	bool "RZ/G2L distro boot command enable"
+
+config RZV2L_DISTRO_BOOT
+	bool "RZ/V2L distro boot command enable"
+
+config RZG2UL_DISTRO_BOOT
+	bool "RZ/G2UL distro boot command enable"
+
+config RZG2LC_DISTRO_BOOT
+	bool "RZ/G2LC distro boot command enable"
+
+config RZV2H_DISTRO_BOOT
+	bool "RZ/V2H distro boot command enable"
+
+config RZG3L_DISTRO_BOOT
+	bool "RZ/G3L distro boot command enable"
+	help
+	  Enable the EFI/EBBR distro_bootcmd environment block in
+	  include/configs/smarc-rzg3l.h. Used by the SystemReady
+	  smarc-rzg3l-distros_defconfig target.
+
+config RZG3E_DISTRO_BOOT
+	bool "RZ/G3E distro boot command enable"
+	help
+	  Enable the EFI/EBBR distro_bootcmd environment block in
+	  include/configs/rzg3e-dev.h. Used by the SystemReady
+	  smarc-rzg3e-distros_defconfig target.
+config TARGET_RZT2H_DISTRO_BOOT
+	bool "RZ/T2H distro boot command enable"
+
+config TARGET_RZN2H_DISTRO_BOOT
+	bool "RZ/N2H distro boot command enable"
 
 endif

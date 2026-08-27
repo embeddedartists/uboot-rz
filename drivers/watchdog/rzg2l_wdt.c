@@ -59,8 +59,11 @@ struct rzg2l_wdt_priv {
 static const struct udevice_id rzg2l_wdt_match[] = {
 	{ .compatible = "renesas,r9a07g044c-wdt", },
 	{ .compatible = "renesas,r9a07g044l-wdt", },
+	{ .compatible = "renesas,r9a07g044-wdt", },
 	{ .compatible = "renesas,r9a07g054l-wdt", },
+	{ .compatible = "renesas,r9a07g054-wdt", },
 	{ .compatible = "renesas,r9a07g043u-wdt", },
+	{ .compatible = "renesas,r9a07g043-wdt", },
 	{ .compatible = "renesas,r9a07g043f-wdt", },
 	{ /* sentinel */ }
 };
@@ -258,7 +261,9 @@ static int rzg2l_wdt_probe(struct udevice *watchdog_dev)
 {
 	struct rzg2l_wdt_priv *priv = dev_get_priv(watchdog_dev);
 	unsigned long pclk_rate;
+#if 0
 	int ret;
+#endif
 
 	priv->base = dev_read_addr_ptr(watchdog_dev);
 	printf("WDT:   watchdog@%p\n", priv->base);
@@ -266,6 +271,7 @@ static int rzg2l_wdt_probe(struct udevice *watchdog_dev)
 		printf("failed to get wdt addr\n");
 		return -EINVAL;
 	}
+#if 0
 	/* Get watchdog main clock */
 	ret = clk_get_by_index(watchdog_dev, 0, &priv->clk);
 	if (ret) {
@@ -273,7 +279,8 @@ static int rzg2l_wdt_probe(struct udevice *watchdog_dev)
 		return -EINVAL;
 	}
 	priv->osc_clk_rate = clk_get_rate(&priv->clk);
-
+#endif
+	priv->osc_clk_rate = 24000000;  /* 24 MHz */
 	/* Get Peripheral clock
 	 * Because pclk is not defined in the CPG clock
 	 * Hard code to set pclk rate

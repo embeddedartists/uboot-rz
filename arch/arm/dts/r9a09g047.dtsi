@@ -14,7 +14,21 @@
 	#size-cells = <2>;
 
 	/* clock can be either from exclk or crystal oscillator (XIN/XOUT) */
-	extal_clk: extal-clk {
+	qextal_clk: extal_clk: extal-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* This value must be overridden by the board */
+		clock-frequency = <0>;
+	};
+
+	audio_extal_clk: audio-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		/* This value must be overridden by the board */
+		clock-frequency = <0>;
+	};
+
+	rtxin_clk: rtxin-clk {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		/* This value must be overridden by the board */
@@ -85,6 +99,7 @@
 		L3_CA55: cache-controller-0 {
 			compatible = "cache";
 			cache-unified;
+			cache-level = <3>;
 			cache-size = <0x100000>;
 		};
 	};
@@ -171,8 +186,8 @@
 		cpg: clock-controller@10420000 {
 			compatible = "renesas,r9a09g047-cpg";
 			reg = <0 0x10420000 0 0x10000>;
-			clocks = <&extal_clk>;
-			clock-names = "extal";
+			clocks = <&audio_extal_clk>, <&rtxin_clk>, <&qextal_clk>;
+			clock-names = "audio_extal", "rtxin", "qextal";
 			#clock-cells = <2>;
 			#reset-cells = <1>;
 			#power-domain-cells = <0>;
@@ -190,8 +205,45 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 			gpio-ranges = <&pinctrl 0 0 232>;
+			renesas,port-max = <29>;
+			clocks = <&cpg CPG_MOD R9A09G047_IOTOP_SHCLK>;
+			power-domains = <&cpg>;
 			resets = <&cpg R9A09G047_IOTOP_RESETN>,
 				 <&cpg R9A09G047_IOTOP_ERROR_RESETN>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			interrupts = <GIC_SPI 419 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 420 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 421 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 422 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 423 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 424 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 425 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 426 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 427 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 428 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 429 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 430 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 431 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 432 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 433 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 434 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 435 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 436 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 437 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 438 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 439 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 440 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 441 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 442 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 443 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 444 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 445 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 446 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 447 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 448 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 449 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 450 IRQ_TYPE_LEVEL_HIGH>;
 		};
 
 		gic: interrupt-controller@14900000 {
@@ -204,10 +256,10 @@
 			interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_LOW>;
 		};
 
-		eth0: ethernet@15C30000 {
+		eth0: ethernet@15c30000 {
 			compatible = "renesas,rzv2h-eqos",
 					"snps,dwc-qos-ethernet-4.10";
-			reg = <0 0x15C30000 0 0x10000>;
+			reg = <0 0x15c30000 0 0x10000>;
 			interrupts = <GIC_SPI 765 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 767 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 766 IRQ_TYPE_LEVEL_HIGH>;
@@ -230,10 +282,10 @@
 			snps,burst-map = <0x7>;
 		};
 
-		eth1: ethernet@15C40000 {
+		eth1: ethernet@15c40000 {
 			compatible = "renesas,rzv2h-eqos",
 					"snps,dwc-qos-ethernet-4.10";
-			reg = <0 0x15C40000 0 0x10000>;
+			reg = <0 0x15c40000 0 0x10000>;
 			interrupts = <GIC_SPI 780 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 782 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 781 IRQ_TYPE_LEVEL_HIGH>;
@@ -432,11 +484,11 @@
 			status = "disabled";
 		};
 
-		i2c8: i2c@11C01000 {
+		i2c8: i2c@11c01000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
 			compatible = "renesas,riic-r9a09g047";
-			reg = <0 0x11C01000 0 0x400>;
+			reg = <0 0x11c01000 0 0x400>;
 			interrupts = <GIC_SPI 222 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 523 IRQ_TYPE_EDGE_RISING>,
 				     <GIC_SPI 522 IRQ_TYPE_EDGE_RISING>,

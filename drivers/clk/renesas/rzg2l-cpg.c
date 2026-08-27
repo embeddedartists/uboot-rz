@@ -70,8 +70,8 @@ static int rzg2l_cpg_clk_set(struct clk *clk, bool enable)
 	dev_dbg(clk->dev, "%s %s clock %u\n", enable ? "enable" : "disable",
 		is_mod_clk(clk->id) ? "module" : "core", cpg_clk_id);
 	if (!is_mod_clk(clk->id)) {
-		dev_err(clk->dev, "ID %lu is not a module clock\n", clk->id);
-		return -EINVAL;
+		dev_dbg(clk->dev, "ID %lu is not a module clock\n", clk->id);
+		return 0; 
 	}
 
 	for (i = 0; i < data->info->num_mod_clks; i++) {
@@ -208,12 +208,13 @@ static ulong rzg2l_div_clk_get_rate(struct udevice *dev, const struct cpg_core_c
 
 static ulong rzg2l_core_clk_get_rate(struct udevice *dev, const struct cpg_core_clk *cc)
 {
+	ulong parent_rate;
+	struct clk clk_in;
 	switch (cc->type) {
 	case CLK_TYPE_FF:
-		const ulong parent_rate = rzg2l_cpg_clk_get_rate_by_id(dev, cc->parent);
+		parent_rate = rzg2l_cpg_clk_get_rate_by_id(dev, cc->parent);
 		return parent_rate * cc->mult / cc->div;
 	case CLK_TYPE_IN:
-		struct clk clk_in;
 		clk_get_by_name(dev, cc->name, &clk_in);
 		return clk_get_rate(&clk_in);
 	case CLK_TYPE_SD_MUX:

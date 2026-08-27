@@ -21,6 +21,7 @@
 #define PIN(n)	(0x0800 + 0x10 + (n))	  /* Port Input Register */
 #define PFC(n)	(0x0400 + 0x40 + (n) * 4) /* Port Function Control Register */
 #define PWPR	(0x3014)		  /* Port Write Protection Register */
+#define PWPR_G3S	(0x3000)
 
 #define PWPR_B0WI	BIT(7)		  /* Bit Write Disable */
 #define PWPR_PFCWE	BIT(6)		  /* PFC Register Write Enable */
@@ -31,13 +32,45 @@ DECLARE_GLOBAL_DATA_PTR;
 
 struct rzg2l_pinctrl_priv {
 	void __iomem	*regs;
+	struct udevice	*dev;
 };
+
+/* specific RZ/G3S port IDs with offset starting from 0x20 */
+static const unsigned int port_id_g3s[] = {
+	0, 5, 6, 11, 12, 13, 14, 15, 16, 17, 18,
+	1, 2, 3, 4, 7, 8, 9, 10
+};
+
+static int rzg3s_find_port_index(unsigned int port)
+{
+	int idx = 0;
+
+	for (idx = 0; idx < ARRAY_SIZE(port_id_g3s); idx++)
+		if (port_id_g3s[idx] == port)
+			break;
+
+	return idx;
+}
+
+static int rzg3s_find_port_offset(unsigned int port)
+{
+	int idx = rzg3s_find_port_index(port);
+
+	if (idx > 10)
+		return (idx + 0x15);
+
+	return (idx + 0x10);
+}
 
 static void rzg2l_pinctrl_set_function(struct rzg2l_pinctrl_priv *priv,
 				       u16 port, u8 pin, u8 func)
 {
 	u32 reg32;
 	u8 reg8;
+	ofnode cur_node  = dev_ofnode(priv->dev);
+
+	if (ofnode_device_is_compatible(cur_node, "renesas,r9a08g045s-pinctrl"))
+		port = rzg3s_find_port_offset(port);
 
 	/* Set GPIO or Func in PMC, then set Func in PFC */
 	reg8 = readb(priv->regs + PMC(port));
@@ -45,7 +78,10 @@ static void rzg2l_pinctrl_set_function(struct rzg2l_pinctrl_priv *priv,
 	writeb(reg8, priv->regs + PMC(port));
 
 	reg32 = readl(priv->regs + PFC(port));
-	reg32 = (reg32 & ~(0x07 << (pin * 4))) | (func << (pin * 4));
+	if (ofnode_device_is_compatible(cur_node, "renesas,r9a08g045s-pinctrl"))
+		reg32 = (reg32 & ~(0x07 << (pin * 4))) | ((func - 1) << (pin * 4));
+	else
+		reg32 = (reg32 & ~(0x07 << (pin * 4))) | (func << (pin * 4));
 	writel(reg32, priv->regs + PFC(port));
 
 }
@@ -53,12 +89,15 @@ static void rzg2l_pinctrl_set_function(struct rzg2l_pinctrl_priv *priv,
 static int rzg2l_pinctrl_set_state(struct udevice *dev, struct udevice *config)
 {
 	struct rzg2l_pinctrl_priv *priv = dev_get_plat(dev);
+	ofnode cur_node  = dev_ofnode(dev);
 	u16 port;
 	u16 port_max = (u16)dev_get_driver_data(dev);
 	u8 pin, func;
 	int i, count;
 	const u32 *data;
 	u32 cells[port_max * RZG2L_MAX_PINS_PER_PORT];
+	u8 nmax_func = 5;
+	u8 nmin_func = 0;
 
 	data = dev_read_prop(config, "pinmux", &count);
 	if (count < 0) {
@@ -72,15 +111,35 @@ static int rzg2l_pinctrl_set_state(struct udevice *dev, struct udevice *config)
 		      __func__, count);
 		return -EINVAL;
 	}
-	writel(0, priv->regs + PWPR);
-	writel(PWPR_PFCWE, priv->regs + PWPR);
+
+	if (ofnode_device_is_compatible(cur_node, "renesas,r9a08g045s-pinctrl")) {
+		writel(0, priv->regs + PWPR_G3S);
+		writel(PWPR_PFCWE, priv->regs + PWPR_G3S);
+		nmax_func = 8;
+		nmin_func = 1;
+	} else {
+		writel(0, priv->regs + PWPR);
+		writel(PWPR_PFCWE, priv->regs + PWPR);
+	}
+
+	if (ofnode_device_is_compatible(cur_node, "renesas,r9a07g043-pinctrl")) {
+		nmax_func = 7; /* External Pins and Multiplexed Functional Pins 0-7 for RZG2UL */
+	}
 
 	for (i = 0 ; i < count; i++) {
 		cells[i] = fdt32_to_cpu(data[i]);
+#if defined(CONFIG_RZG2L_DISTRO_BOOT) || defined(CONFIG_RZV2L_DISTRO_BOOT) || defined(CONFIG_RZG2UL_DISTRO_BOOT) || defined(CONFIG_RZG2LC_DISTRO_BOOT)
+		func = (cells[i] >> 16) & 0xf;
+		port = (cells[i] & 0xffff) / RZG2L_MAX_PINS_PER_PORT;
+		pin  = (cells[i] & 0xffff) % RZG2L_MAX_PINS_PER_PORT;
+#else
 		func = (cells[i] >> 12) & 0xf;
 		port = (cells[i] / RZG2L_MAX_PINS_PER_PORT) & 0x1ff;
 		pin = cells[i] % RZG2L_MAX_PINS_PER_PORT;
-		if (func > 5 || port >= port_max || pin >= RZG2L_MAX_PINS_PER_PORT) {
+#endif
+
+		if (func > nmax_func || func < nmin_func || port >= port_max ||
+				pin >= RZG2L_MAX_PINS_PER_PORT) {
 			printf("Invalid cell %i in node %s!\n",
 			       count, ofnode_get_name(dev_ofnode(config)));
 			continue;
@@ -89,8 +148,13 @@ static int rzg2l_pinctrl_set_state(struct udevice *dev, struct udevice *config)
 		rzg2l_pinctrl_set_function(priv, port, pin, func);
 	}
 
-	writel(0, priv->regs + PWPR);
-	writel(PWPR_B0WI, priv->regs + PWPR);
+	if (ofnode_device_is_compatible(cur_node, "renesas,r9a08g045s-pinctrl")) {
+		writel(0, priv->regs + PWPR_G3S);
+		writel(PWPR_B0WI, priv->regs + PWPR_G3S);
+	} else {
+		writel(0, priv->regs + PWPR);
+		writel(PWPR_B0WI, priv->regs + PWPR);
+	}
 	return 0;
 }
 
@@ -98,17 +162,21 @@ const struct pinctrl_ops rzg2l_pinctrl_ops  = {
 	.set_state = rzg2l_pinctrl_set_state,
 };
 
-static int rzg2l_pinctrl_probe(struct udevice *dev)
+static int rzg2l_pinctrl_bind(struct udevice *dev)
 {
-	struct rzg2l_pinctrl_priv *priv = dev_get_plat(dev);
 	ofnode node;
 
-	priv->regs = dev_read_addr_ptr(dev);
-	if (!priv->regs) {
-		dev_err(dev, "can't get address\n");
-		return -EINVAL;
-	}
-
+	/*
+	 * The GPIO banks are described as gpio-controller subnodes of the pin
+	 * controller and have no compatible of their own, so they are bound
+	 * here explicitly. Do this at .bind (DT-scan) time rather than from
+	 * .probe: the pin controller is only probed lazily, when a consumer
+	 * applies a "default" pinctrl state. On boards that have no such
+	 * consumer (e.g. smarc-rzg3l, where no node carries a pinctrl-0) the
+	 * pin controller would never probe, leaving the GPIO banks unbound and
+	 * "gpio status -a" empty. Binding at scan time decouples GPIO
+	 * availability from the pinctrl probe ordering.
+	 */
 	dev_for_each_subnode(node, dev) {
 		struct udevice *gpiodev;
 
@@ -123,12 +191,31 @@ static int rzg2l_pinctrl_probe(struct udevice *dev)
 	return 0;
 }
 
+static int rzg2l_pinctrl_probe(struct udevice *dev)
+{
+	struct rzg2l_pinctrl_priv *priv = dev_get_plat(dev);
+
+	priv->dev = dev;
+
+	priv->regs = dev_read_addr_ptr(dev);
+	if (!priv->regs) {
+		dev_err(dev, "can't get address\n");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static const struct udevice_id rzg2l_pinctrl_match[] = {
 	{ .compatible = "renesas,r9a07g044l-pinctrl", .data = 49 },
+	{ .compatible = "renesas,r9a07g044-pinctrl", .data = 49 },
 	{ .compatible = "renesas,r9a07g044c-pinctrl", .data = 49 },
 	{ .compatible = "renesas,r9a07g054l-pinctrl", .data = 49 },
+	{ .compatible = "renesas,r9a07g054-pinctrl", .data = 49 },
 	{ .compatible = "renesas,r9a07g043u-pinctrl", .data = 19 },
 	{ .compatible = "renesas,r9a07g043f-pinctrl", .data = 19 },
+	{ .compatible = "renesas,r9a07g043-pinctrl", .data = 19 },
+	{ .compatible = "renesas,r9a08g045s-pinctrl", .data = 19 }, //19 Port
 	{}
 };
 
@@ -136,6 +223,7 @@ U_BOOT_DRIVER(rzg2l_pinctrl) = {
 	.name		= "rzg2l_pinctrl",
 	.id		= UCLASS_PINCTRL,
 	.of_match	= rzg2l_pinctrl_match,
+	.bind		= rzg2l_pinctrl_bind,
 	.probe		= rzg2l_pinctrl_probe,
 	.plat_auto	= sizeof(struct rzg2l_pinctrl_priv),
 	.ops		= &rzg2l_pinctrl_ops,

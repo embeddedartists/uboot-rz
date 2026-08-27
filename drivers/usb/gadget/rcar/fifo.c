@@ -18,6 +18,9 @@
  *
  */
 
+#if defined(CONFIG_ARCH_RZMPU)
+#define __io
+#endif
 #include <asm/io.h>
 #include "common.h"
 #include "pipe.h"
@@ -553,19 +556,23 @@ static int usbhsf_pio_try_push(struct usbhs_pkt *pkt, int *is_done)
 	 * 32-bit access only
 	 */
 	if (len >= 4 && !((unsigned long)buf & 0x03)) {
-		iowrite32_rep((unsigned long)addr, buf, len / 4);
+		iowrite32_rep((void __iomem *)addr, buf, len / 4);
 		len %= 4;
 		buf += total_len - len;
 	}
 
 	/* the rest operation */
-	if (usbhs_get_dparam(priv, cfifo_byte_addr)) {
+#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G043U) || defined(CONFIG_R9A07G054L) || defined(CONFIG_ARCH_RZMPU)
+        if (usbhs_get_dparam(priv, cfifo_byte_addr)) {
 		for (i = 0; i < len; i++)
 			iowrite8(buf[i], addr + (i & 0x03));
 	} else {
+#endif
 		for (i = 0; i < len; i++)
 			iowrite8(buf[i], addr + (0x03 - (i & 0x03)));
+#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G043U) || defined(CONFIG_R9A07G054L) || defined(CONFIG_ARCH_RZMPU)
 	}
+#endif
 
 	/*
 	 * variable update
@@ -724,7 +731,7 @@ static int usbhsf_pio_try_pop(struct usbhs_pkt *pkt, int *is_done)
 	 * 32-bit access only
 	 */
 	if (len >= 4 && !((unsigned long)buf & 0x03)) {
-		ioread32_rep((unsigned long)addr, buf, len / 4);
+		ioread32_rep((void __iomem *)addr, buf, len / 4);
 		len %= 4;
 		buf += total_len - len;
 	}

@@ -6,7 +6,7 @@
 #ifndef __RZV2H_DEV_H
 #define __RZV2H_DEV_H
 
-#include <asm/arch/rmobile.h>
+#include <asm/arch/renesas.h>
 
 #define CONFIG_REMAKE_ELF
 
@@ -43,18 +43,92 @@
 /* SDHI clock freq */
 #define CONFIG_SH_SDHI_FREQ		133000000
 
-/* The HF/QSPI layout permits up to 1 MiB large bootloader blob */
-#define CONFIG_BOARD_SIZE_LIMIT		1048576
-
 /* ENV setting */
-#define CONFIG_EXTRA_ENV_SETTINGS	\
+#if defined(CONFIG_RZV2H_DISTRO_BOOT)
+#define CFG_EXTRA_ENV_SETTINGS	\
 	"usb_pgood_delay=2000\0" \
-	"bootm_size=0x10000000\0"
+	"fdtfile="CONFIG_DEFAULT_FDT_FILE"\0" \
+	"kernel_addr_r=0x48080000\0" \
+	"boot_efi_binary=efi/boot/bootaa64.efi\0" \
+	"scan_for_usb_dev=" \
+		"usb start; " \
+		"if test ! -e usb ${devnum}:1 /; then usb reset; fi;\0" \
+	"scan_boot_efi=" \
+		"part list ${devtype} ${devnum} devplist; "  \
+		"env exists devplist || setenv devplist 1; " \
+		"for distro_bootpart in ${devplist}; do " \
+			"if test -e ${devtype} ${devnum}:${distro_bootpart} ${boot_efi_binary}; then " \
+				"load ${devtype} ${devnum}:${distro_bootpart} " \
+				"${kernel_addr_r} ${boot_efi_binary};"          \
+				"echo BootEFI from <${devtype}> [${devnum}:${distro_bootpart}]; "\
+				"bootefi ${kernel_addr_r};"                     \
+			"fi;" \
+		"done;\0" \
+	"mmc0=" \
+			"setenv devnum 0;" \
+			"setenv devtype mmc;" \
+			"run scan_boot_efi;\0" \
+	"mmc1=" \
+			"setenv devnum 1;" \
+			"setenv devtype mmc;" \
+			"run scan_boot_efi;\0" \
+	"usb0=" \
+			"setenv devnum 0;" \
+			"setenv devtype usb;" \
+			"run scan_for_usb_dev;"\
+			"run scan_boot_efi;\0"\
+	"usb1=" \
+			"setenv devnum 1;" \
+			"setenv devtype usb;" \
+			"run scan_for_usb_dev;"\
+			"run scan_boot_efi;\0" \
+	"boot_targets=" \
+			"usb0 usb1 mmc0 mmc1\0" \
+	"distro_bootcmd=" \
+			"env exists boot_targets || setenv boot_targets mmc0 mmc1 usb0 usb1; " \
+			"for target in ${boot_targets}; do "\
+				"run ${target};" \
+			"done;" \
+	"bootcmd=run distro_bootcmd\0"
 
-#define CONFIG_BOOTCOMMAND	\
-	"tftp 0x48080000 Image; " \
-	"tftp 0x48000000 Image-"CONFIG_DEFAULT_FDT_FILE"; " \
-	"booti 0x48080000 - 0x48000000"
+#else
+
+#if defined(CONFIG_TARGET_RZV2H_DEV)
+#define CFG_EXTRA_ENV_SETTINGS	\
+	"usb_pgood_delay=2000\0"	\
+	"bootm_size=0x10000000\0"	\
+	"prodsdbootargs=setenv bootargs rw rootwait earlycon root=/dev/mmcblk2p2 \0" \
+	"prodemmcbootargs=setenv bootargs rw rootwait earlycon root=/dev/mmcblk0p2 \0" \
+	"bootimage=booti 0x48080000 - 0x48000000 \0" \
+	"emmcload=ext4load mmc 0:2 0x48080000 boot/Image;ext4load mmc 0:2 0x48000000 boot/r9a09g057h4-dev.dtb;run prodemmcbootargs \0" \
+	"sd2load=ext4load mmc 2:2 0x48080000 boot/Image;ext4load mmc 2:2 0x48000000 boot/r9a09g057h4-dev.dtb;run prodsdbootargs \0" \
+	"bootcmd_check=if mmc dev 2; then run sd2load; else run emmcload; fi \0"
+#elif defined(CONFIG_TARGET_RZV2H_EVK_ALPHA)
+#define CFG_EXTRA_ENV_SETTINGS	\
+	"usb_pgood_delay=2000\0"	\
+	"bootm_size=0x10000000\0"	\
+	"prodsdbootargs=setenv bootargs rw rootwait earlycon root=/dev/mmcblk1p2 \0" \
+	"prodemmcbootargs=setenv bootargs rw rootwait earlycon root=/dev/mmcblk0p2 \0" \
+	"set_pmic=i2c dev 8; i2c mw 0x6a 0x22 0x0f; i2c mw 0x6a 0x24 0x00; i2c md 0x6a 0x00 0x30; i2c mw 0x12 0x8D 0x02; i2c md 0x12 0x20 0x80 \0" \
+	"bootimage=run set_pmic; booti 0x48080000 - 0x48000000 \0" \
+	"emmcload=ext4load mmc 0:2 0x48080000 boot/Image;ext4load mmc 0:2 0x48000000 boot/r9a09g057h4-evk-alpha.dtb;run prodemmcbootargs \0" \
+	"sd1load=ext4load mmc 1:2 0x48080000 boot/Image;ext4load mmc 1:2 0x48000000 boot/r9a09g057h4-evk-alpha.dtb;run prodsdbootargs \0" \
+	"bootcmd_check=if mmc dev 1; then run sd1load; else run emmcload; fi \0"
+#else
+#define CFG_EXTRA_ENV_SETTINGS       \
+	"usb_pgood_delay=2000\0"        \
+	"bootm_size=0x10000000\0"       \
+	"prodsd0bootargs=setenv bootargs rw rootwait earlycon root=/dev/mmcblk0p2 \0" \
+	"prodsd1bootargs=setenv bootargs rw rootwait earlycon root=/dev/mmcblk1p2 \0" \
+	"bootimage=booti 0x48080000 - 0x48000000 \0" \
+	"sd0load=ext4load mmc 0:2 0x48080000 boot/Image;ext4load mmc 0:2 0x48000000 boot/r9a09g057h44-rzv2h-evk.dtb;run prodsd0bootargs \0" \
+	"sd1load=ext4load mmc 1:2 0x48080000 boot/Image;ext4load mmc 1:2 0x48000000 boot/r9a09g057h44-rzv2h-evk.dtb;run prodsd1bootargs \0" \
+	"bootcmd_check=if mmc dev 1; then run sd1load; else run sd0load; fi \0"
+#endif
+
+#define CONFIG_BOOTCOMMAND	"env default -a;run bootcmd_check;run bootimage"
+
+#endif
 
 /* For board */
 /* Ethernet RAVB */

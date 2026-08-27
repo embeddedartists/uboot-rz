@@ -44,6 +44,7 @@
 #define SDHI_VERSION			(0x01C4 >> 1)
 #define SDHI_HOST_MODE			(0x01C8 >> 1)
 #define SDHI_SDIF_MODE			(0x01CC >> 1)
+#define SDHI_SD_STATUS			(0x01E4 >> 1)	/* Only support RZ/T2H */
 #define SDHI_EXT_SWAP			(0x01E0 >> 1)
 #define SDHI_SD_DMACR			(0x0324 >> 1)
 
@@ -156,6 +157,11 @@
 #define SOFT_RST_ON			(0 << 0)
 #define SOFT_RST_OFF			(1 << 0)
 
+/* SDHI_SD_STATUS */
+#define SD_STATUS_SD_PWEN		(1 << 0)
+#define SD_STATUS_SD_RST		(1 << 1)
+#define SD_STATUS_SD_IOVS		(1 << 16)
+
 #define	CLKDEV_SD_DATA			25000000	/* 25 MHz */
 #define CLKDEV_HS_DATA			50000000	/* 50 MHz */
 #define CLKDEV_MMC_DATA			20000000	/* 20MHz */
@@ -169,7 +175,7 @@
 #if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || defined(CONFIG_R9A07G043U) || defined(CONFIG_R9A07G043U)
 #define CONFIG_SYS_SH_SDHI_NR_CHANNEL 2
 #endif
-#if (defined(CONFIG_R9A09G047) || defined(CONFIG_R9A09G057))
+#if (defined(CONFIG_R9A09G047) || defined(CONFIG_R9A09G057) || defined(CONFIG_R9A09G056) || defined(CONFIG_R9A08G045S) || defined(CONFIG_R9A08G046))
 #define CONFIG_SYS_SH_SDHI_NR_CHANNEL 3
 #endif
 

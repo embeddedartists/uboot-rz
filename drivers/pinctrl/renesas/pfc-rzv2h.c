@@ -30,6 +30,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 struct rzv2h_pinctrl_priv {
 	void __iomem	*regs;
+	u16		port_max;
 };
 
 static void rzv2h_pinctrl_set_function(struct rzv2h_pinctrl_priv *priv,
@@ -53,7 +54,7 @@ static int rzv2h_pinctrl_set_state(struct udevice *dev, struct udevice *config)
 {
 	struct rzv2h_pinctrl_priv *priv = dev_get_plat(dev);
 	u16 port;
-	u16 port_max = (u16)dev_get_driver_data(dev);
+	u16 port_max = priv->port_max;
 	u8 pin, func;
 	int i, count;
 	const u32 *data;
@@ -75,9 +76,15 @@ static int rzv2h_pinctrl_set_state(struct udevice *dev, struct udevice *config)
 
 	for (i = 0 ; i < count; i++) {
 		cells[i] = fdt32_to_cpu(data[i]);
+#if defined(CONFIG_RZV2H_DISTRO_BOOT) || defined(CONFIG_RZG3E_DISTRO_BOOT)
+		func = (cells[i] >> 16) & 0xf;
+		port = (cells[i] & 0xffff) / RZV2H_MAX_PINS_PER_PORT;
+		pin  = (cells[i] & 0xffff) % RZV2H_MAX_PINS_PER_PORT;
+#else
 		func = (cells[i] >> 12) & 0xf;
 		port = (cells[i] / RZV2H_MAX_PINS_PER_PORT) & 0x1ff;
 		pin = cells[i] % RZV2H_MAX_PINS_PER_PORT;
+#endif
 		if (func > 15 || port >= port_max || pin >= RZV2H_MAX_PINS_PER_PORT) {
 			printf("Invalid cell %i in node %s!\n",
 			       count, ofnode_get_name(dev_ofnode(config)));
@@ -106,6 +113,10 @@ static int rzv2h_pinctrl_probe(struct udevice *dev)
 		dev_err(dev, "can't get address\n");
 		return -EINVAL;
 	}
+
+	/* Read port_max from DT, fallback to driver data if not present */
+	priv->port_max = dev_read_u32_default(dev, "renesas,port-max",
+					      (u32)dev_get_driver_data(dev));
 
 	dev_for_each_subnode(node, dev) {
 		struct udevice *gpiodev;

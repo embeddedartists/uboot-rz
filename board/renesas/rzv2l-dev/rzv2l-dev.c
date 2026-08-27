@@ -14,13 +14,20 @@
 #include <asm/arch/sys_proto.h>
 #include <asm/gpio.h>
 #include <asm/arch/gpio.h>
-#include <asm/arch/rmobile.h>
+#include <asm/arch/renesas.h>
 #include <asm/arch/rcar-mstp.h>
 #include <asm/arch/sh_sdhi.h>
+#include <asm/system.h>
+#include <asm/ptrace.h>
 #include <i2c.h>
 #include <mmc.h>
 #include <wdt.h>
 #include <rzg2l_wdt.h>
+#include <spi.h>
+#include <spi-mem.h>
+#include <linux/mtd/spi-nor.h>
+#include "../rzg-common/common.h"
+#include <efi_loader.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -66,8 +73,55 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define RPC_CMNCR		0x10060000
 
+#define NVCR_READ_CMD		0xB5
+#define NVCR_WRITE_CMD		0xB1
+#define WRITE_ENABLE_CMD	0x06
+#define NVCR_LENGTH		2
+#define NVCR_BIT4_MASK		~(1 << 4)
+
 /* WDT */
 #define WDT_INDEX		0
+
+/* SYSC */
+#define SYS_BASE			(0x11020000)
+#define SYS_LSI_MODE			(SYS_BASE + 0xA00)
+#define SYS_LSI_MODE_STAT_MD_BOOT_MASK	(0x7)
+#define ESD_MODE			(0)
+#if IS_ENABLED(CONFIG_EFI_HAVE_CAPSULE_SUPPORT)
+
+#define EFI_FIRMWARE_IMAGE_TYPE_RZV2L_GUID\
+   EFI_GUID(0xe17c09da, 0x3310, 0x406e, 0xb8, 0x79, \
+             0xd9, 0xc7, 0xb5, 0x17, 0x72, 0xf5)
+
+struct efi_fw_image fw_images[] = {
+	{
+		.image_type_id = EFI_FIRMWARE_IMAGE_TYPE_RZV2L_GUID,
+		.fw_name = u"bl2_bp-smarc-rzv2l_pmic.bin",
+		.image_index = 1,
+	},
+	{
+		.image_type_id = EFI_FIRMWARE_IMAGE_TYPE_RZV2L_GUID,
+		.fw_name = u"fip-smarc-rzv2l_pmic.bin",
+		.image_index = 2,
+	},
+};
+
+struct efi_capsule_update_info update_info = {
+	.dfu_string =
+		/* BL2 in SPI NOR at offset 0x0, max size 0x20000  */
+		"sf 0:0=bl2_bp-smarc-rzv2l_pmic.bin raw 0x0 0x20000;"
+		/* FIP in SPI NOR at offset 0x60000, max size 0x1F0000 (1984 KB) */
+		"fip-smarc-rzv2l_pmic.bin raw 0x20000 0x1F0000",
+	.num_images = ARRAY_SIZE(fw_images),
+	.images = fw_images,
+};
+
+#endif /* EFI_HAVE_CAPSULE_SUPPORT */
+
+/* ECC */
+#define DDR_MEMC_BASE		(0x11410000)
+#define ECC_ENABLE_ADDR		(0x018C)
+#define ECC_ENABLE_MASK		GENMASK(25, 24)
 
 void s_init(void)
 {
@@ -145,6 +199,65 @@ static void board_usb_init(void)
 	(*(volatile u32 *)(USB1_BASE + HcRhDescriptorA)) |= (0x1u << 12);       /* NOCP = 1 */
 }
 
+static int board_spinor_op_nvcr_setup(void)
+{
+	struct spi_slave *spi;
+	struct spi_nor *nor;
+	int ret;
+	u8 nvcr[2];
+
+	/* Initialize SPI */
+	spi = spi_setup_slave(0, 0, 1000000, SPI_MODE_0);
+	if (!spi) {
+		printf("Failed to set up SPI slave\n");
+		return -1;
+	}
+
+	ret = spi_claim_bus(spi);
+	if (ret) {
+		printf("Failed to claim SPI bus\n");
+		spi_free_slave(spi);
+		return ret;
+	}
+
+	nor = dev_get_uclass_priv(spi->dev);
+	if (!nor) {
+		printf("Failed to get SPI NOR\n");
+		ret = -ENODEV;
+		goto release_bus;
+	}
+
+	ret = nor->read_reg(nor, NVCR_READ_CMD, nvcr, 2);
+	if (ret) {
+		printf("Failed to send NVCR Read command: %d\n", ret);
+		goto release_bus;
+	}
+
+	/* Clear bit 4 of the NVCR - RESET# on DQ3 */
+	nvcr[0] &= NVCR_BIT4_MASK;
+
+	/* Write enable */
+	ret = nor->write_reg(nor, SPINOR_OP_WREN, NULL, 0);
+	if (ret) {
+		printf("Failed to send Write Enable command: %d\n", ret);
+		goto release_bus;
+	}
+
+	/* Write NVCR */
+	nor->cmd_buf[0] = nvcr[0];
+	nor->cmd_buf[1] = nvcr[1];
+	ret = nor->write_reg(nor, NVCR_WRITE_CMD, nor->cmd_buf, 2);
+	if (ret) {
+		printf("Failed to send NVCR Write command: %d\n", ret);
+		goto release_bus;
+	}
+
+release_bus:
+	spi_release_bus(spi);
+	spi_free_slave(spi);
+	return ret;
+}
+
 int board_early_init_f(void)
 {
 
@@ -155,6 +268,7 @@ int board_init(void)
 {
 	/* adress of boot parameters */
 	gd->bd->bi_boot_params = CONFIG_TEXT_BASE + 0x50000;
+	board_spinor_op_nvcr_setup();
 	board_usb_init();
 
 	return 0;
@@ -182,3 +296,46 @@ int board_late_init(void)
 
 	return 0;
 }
+
+static const char * const rzv2l_dt_esd_mode[] = {
+	"/soc/mmc@11c00000", "vmmc-supply", "<&/regulator-vcc-sdhi0>",
+	"/soc/mmc@11c00000", "vqmmc-supply", "<&/regulator-vccq-sdhi0>",
+};
+
+int ft_verify_fdt(void *fdt)
+{
+	const char **fdt_dt = NULL;
+	int size = 0;
+	u32 boot_mode = readl(SYS_LSI_MODE);
+
+	switch (boot_mode & SYS_LSI_MODE_STAT_MD_BOOT_MASK) {
+	case ESD_MODE:
+	{
+		fdt_dt = (const char **)rzv2l_dt_esd_mode;
+		size = ARRAY_SIZE(rzv2l_dt_esd_mode);
+		break;
+	}
+	default:
+		return 1;
+	}
+
+	return update_fdt(fdt, fdt_dt, size);
+};
+
+#if defined(CONFIG_MULTI_DTB_FIT)
+int board_fit_config_name_match(const char *name)
+{
+	u32 ecc;
+
+	ecc = readl(DDR_MEMC_BASE + ECC_ENABLE_ADDR);
+	ecc &= ECC_ENABLE_MASK;
+
+	if (!strcmp(name, "smarc-rzv2l-ecc") && ecc)
+		return 0;
+
+	if (!strcmp(name, "smarc-rzv2l") && !(ecc))
+		return 0;
+
+	return -1;
+}
+#endif

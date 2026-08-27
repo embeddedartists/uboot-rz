@@ -15,13 +15,18 @@
 #include <asm/arch/sys_proto.h>
 #include <asm/gpio.h>
 #include <asm/arch/gpio.h>
-#include <asm/arch/rmobile.h>
+#include <asm/arch/renesas.h>
 #include <asm/arch/rcar-mstp.h>
 #include <asm/arch/sh_sdhi.h>
 #include <i2c.h>
 #include <mmc.h>
-#include <wdt.h>
 #include <rzg2l_wdt.h>
+#include <wdt.h>
+#include <spi.h>
+#include <spi-mem.h>
+#include <linux/mtd/spi-nor.h>
+#include "../rzg-common/common.h"
+#include <efi_loader.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -78,6 +83,41 @@ DECLARE_GLOBAL_DATA_PTR;
 
 /* WDT */
 #define WDT_INDEX		0
+
+#if IS_ENABLED(CONFIG_EFI_HAVE_CAPSULE_SUPPORT)
+
+#define EFI_FIRMWARE_IMAGE_TYPE_RZG2UL_GUID\
+    EFI_GUID(0xfc5374b8, 0x2df0, 0x4a5c, 0xb6, 0xc8, \
+             0xf6, 0xac, 0xf8, 0xa9, 0x37, 0x41)
+
+struct efi_fw_image fw_images[] = {
+	{
+		.image_type_id = EFI_FIRMWARE_IMAGE_TYPE_RZG2UL_GUID,
+		.fw_name = u"bl2_bp-smarc-rzg2ul_pmic.bin",
+		.image_index = 1,
+	},
+	{
+		.image_type_id = EFI_FIRMWARE_IMAGE_TYPE_RZG2UL_GUID,
+		.fw_name = u"fip-smarc-rzg2ul_pmic.bin",
+		.image_index = 2,
+	},
+};
+
+struct efi_capsule_update_info update_info = {
+	.dfu_string =
+		/* BL2 in SPI NOR at offset 0x0, max size 0x20000  */
+		"sf 0:0=bl2_bp-smarc-rzg2ul_pmic.bin raw 0x0 0x20000;"
+		/* FIP in SPI NOR at offset 0x60000, max size 0x1F0000 (1984 KB) */
+		"fip-smarc-rzg2ul_pmic.bin raw 0x20000 0x1F0000",
+	.num_images = ARRAY_SIZE(fw_images),
+	.images = fw_images,
+};
+
+#endif /* EFI_HAVE_CAPSULE_SUPPORT */
+/* ECC */
+#define DDR_MEMC_BASE		(0x11410000)
+#define ECC_ENABLE_ADDR		(0x0174)
+#define ECC_ENABLE_MASK		GENMASK(25, 24)
 
 void s_init(void)
 {
@@ -253,3 +293,21 @@ int board_late_init(void)
 
 	return 0;
 }
+
+#if defined(CONFIG_MULTI_DTB_FIT)
+int board_fit_config_name_match(const char *name)
+{
+	u32 ecc;
+
+	ecc = readl(DDR_MEMC_BASE + ECC_ENABLE_ADDR);
+	ecc &= ECC_ENABLE_MASK;
+
+	if (!strcmp(name, "smarc-rzg2ul-ecc") && ecc)
+		return 0;
+
+	if (!strcmp(name, "smarc-rzg2ul") && !(ecc))
+		return 0;
+
+	return -1;
+}
+#endif

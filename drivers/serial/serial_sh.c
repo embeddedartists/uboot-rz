@@ -60,7 +60,7 @@ static void sh_serial_init_generic(struct uart_port *port)
 #endif
 
 #if !(defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G054L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G043U)  \
-|| defined(CONFIG_RZF_DEV) || defined(CONFIG_R9A09G057) || defined(CONFIG_R9A09G047))
+|| defined(CONFIG_RZF_DEV) || defined(CONFIG_R9A09G057) || defined(CONFIG_R9A09G056) || defined(CONFIG_R9A09G047))
 #if IS_ENABLED(CONFIG_RCAR_GEN2) || IS_ENABLED(CONFIG_RCAR_GEN3) || IS_ENABLED(CONFIG_RCAR_GEN4)
 	if (port->type == PORT_HSCIF)
 		sci_out(port, HSSRR, HSSRR_SRE | HSSRR_SRCYC8);
@@ -247,7 +247,10 @@ static const struct dm_serial_ops sh_serial_ops = {
 static const struct udevice_id sh_serial_id[] ={
 	{.compatible = "renesas,sci", .data = PORT_SCI},
 	{.compatible = "renesas,scif", .data = PORT_SCIF},
+	{.compatible = "renesas,scif-r9a07g043", .data = PORT_SCIFA},
 	{.compatible = "renesas,scif-r9a07g044", .data = PORT_SCIFA},
+	{.compatible = "renesas,scif-r9a07g054", .data = PORT_SCIFA},
+	{.compatible = "renesas,scif-r9a09g057", .data = PORT_SCIFA},
 	{.compatible = "renesas,scifa", .data = PORT_SCIFA},
 	{.compatible = "renesas,hscif", .data = PORT_HSCIF},
 	{}

@@ -463,10 +463,9 @@ static int rpc_spi_of_to_plat(struct udevice *bus)
 	plat->regs = dev_read_addr_index(bus, 0);
 	plat->extr = dev_read_addr_index(bus, 1);
 
-#if CONFIG_IS_ENABLED(CLK)
+#if CONFIG_IS_ENABLED(CLK) && !IS_ENABLED(CONFIG_CLK_BYPASS)
 	struct rpc_spi_priv *priv = dev_get_priv(bus);
 	int ret;
-
 	ret = clk_get_by_index(bus, 0, &priv->clk);
 	if (ret < 0) {
 		printf("%s: Could not get clock for %s: %d\n",
@@ -492,6 +491,9 @@ static const struct udevice_id rpc_spi_ids[] = {
 	{ .compatible = "renesas,r9a07g044l-spibsc" },
 	{ .compatible = "renesas,r9a07g043u-spibsc" },
 	{ .compatible = "renesas,r9a07g044c-spibsc" },
+	{ .compatible = "renesas,r9a07g044-rpc-if" },
+	{ .compatible = "renesas,r9a07g054-rpc-if" },
+	{ .compatible = "renesas,r9a07g043-rpc-if" },
 	{ .compatible = "renesas,r9a07g054l-spibsc" },
 	{ .compatible = "renesas,r9a07g043g-spibsc" },
 	{ }

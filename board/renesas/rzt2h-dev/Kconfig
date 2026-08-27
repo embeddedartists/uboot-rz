@@ -1,0 +1,18 @@
+if TARGET_RZT2H_DEV
+
+config SYS_SOC
+	default "rmobile"
+
+config SYS_BOARD
+	default "rzt2h-dev"
+
+config SYS_VENDOR
+	default "renesas"
+
+config SYS_CONFIG_NAME
+	default "rzt2h-dev"
+
+config SERIAL_SH_RSCI
+	bool "Renesas serial driver for RSCI port"
+
+endif

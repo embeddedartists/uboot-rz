@@ -456,8 +456,8 @@ static int eqos_set_half_duplex(struct udevice *dev)
 }
 static int eqos_set_tx_clk_speed_rzv2h(struct udevice *dev)
 {
+#if IS_ENABLED(CONFIG_DWC_ETH_QOS_RZV2H) || IS_ENABLED(CONFIG_DWC_ETH_QOS_RZV2N)
 	struct eqos_priv *eqos = dev_get_priv(dev);
-#if IS_ENABLED(CONFIG_DWC_ETH_QOS_RZV2H)
 	debug("%s(dev=%p):\n", __func__, dev);
 
 	switch (eqos->phy->speed) {
@@ -487,7 +487,7 @@ static int eqos_probe_resources_rzv2h(struct udevice *dev)
 	return 0;
 }
 
-static phy_interface_t eqos_get_interface_rzv2h(struct udevice *dev)
+static phy_interface_t eqos_get_interface_rzv2h(const struct udevice *dev)
 {
 	const char *phy_mode;
 	phy_interface_t interface = PHY_INTERFACE_MODE_NA;
@@ -581,7 +581,7 @@ static int eqos_set_tx_clk_speed_tegra186(struct udevice *dev)
 static int eqos_adjust_link(struct udevice *dev)
 {
 	struct eqos_priv *eqos = dev_get_priv(dev);
-	int ret;
+	int ret, port;
 	bool en_calibration;
 
 	debug("%s(dev=%p):\n", __func__, dev);
@@ -616,6 +616,15 @@ static int eqos_adjust_link(struct udevice *dev)
 		pr_err("eqos_set_*mii_speed*() failed: %d\n", ret);
 		return ret;
 	}
+
+#if IS_ENABLED(CONFIG_DWC_ETH_QOS_RZT2H)
+	/* U-Boot only supports
+	 * a single PHY attached to it. Since we have no idea which port
+	 * the PHY is actually being used with, we update all ports.*/
+	for (port = 0; port < 4; port++) {
+	        ethss_link_up(port, eqos->phy->interface, eqos->phy->speed, eqos->phy->duplex);
+	}
+#endif
 
 	if (en_calibration) {
 		ret = eqos->config->ops->eqos_calibrate_pads(dev);
@@ -1635,6 +1644,18 @@ static const struct udevice_id eqos_ids[] = {
 #if IS_ENABLED(CONFIG_DWC_ETH_QOS_RZV2H)
 	{
 		.compatible = "renesas,rzv2h-eqos",
+		.data = (ulong)&eqos_rzv2h_config
+	},
+#endif
+#if IS_ENABLED(CONFIG_DWC_ETH_QOS_RZV2N)
+	{
+		.compatible = "renesas,rzv2n-eqos",
+		.data = (ulong)&eqos_rzv2h_config
+	},
+#endif
+#if IS_ENABLED(CONFIG_DWC_ETH_QOS_RZT2H)
+	{
+		.compatible = "renesas,rzt2h-eqos",
 		.data = (ulong)&eqos_rzv2h_config
 	},
 #endif

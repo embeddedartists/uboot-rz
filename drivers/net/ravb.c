@@ -145,6 +145,11 @@ struct ravb_priv {
 	struct gpio_desc	reset_gpio;
 };
 
+struct ravb_data {
+	const char *eth1_dev_name;
+};
+
+
 static inline void ravb_flush_dcache(u32 addr, u32 len)
 {
 	flush_dcache_range(addr, addr + len);
@@ -371,7 +376,8 @@ static int ravb_write_hwaddr(struct udevice *dev)
 /* E-MAC init function */
 static int ravb_mac_init(struct ravb_priv *eth)
 {
-#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV)
+#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || \
+	defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV) || defined(CONFIG_R9A08G045S) || defined(CONFIG_R9A08G046)
 	struct phy_device *phy = eth->phydev;
 	u32 ecmr;
 
@@ -400,11 +406,14 @@ static int ravb_mac_init(struct ravb_priv *eth)
 static int ravb_dmac_init(struct udevice *dev)
 {
 	struct ravb_priv *eth = dev_get_priv(dev);
+#if !(defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || \
+	defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV) || defined(CONFIG_R9A08G045S) || defined(CONFIG_R9A08G046))
 	struct eth_pdata *pdata = dev_get_plat(dev);
-	int ret = 0;
 	int mode = 0;
 	unsigned int delay;
 	bool explicit_delay = false;
+#endif
+	int ret = 0;
 
 	/* Set CONFIG mode */
 	ret = ravb_reset(dev);
@@ -415,7 +424,8 @@ static int ravb_dmac_init(struct udevice *dev)
 	writel(0, eth->iobase + RAVB_REG_RIC0);
 	writel(0, eth->iobase + RAVB_REG_RIC1);
 	writel(0, eth->iobase + RAVB_REG_RIC2);
-#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV)
+#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || \
+	defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV) || defined(CONFIG_R9A08G045S) || defined(CONFIG_R9A08G046)
 	writel(0, eth->iobase + RAVB_REG_RIC3);
 #endif
 	writel(0, eth->iobase + RAVB_REG_TIC);
@@ -423,7 +433,8 @@ static int ravb_dmac_init(struct udevice *dev)
 	/* Set little endian */
 	clrbits_le32(eth->iobase + RAVB_REG_CCC, CCC_BOC);
 
-#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV)
+#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || \
+	defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV) || defined(CONFIG_R9A08G045S) || defined(CONFIG_R9A08G046)
 	/* AVB rx set */
 	writel(0x60000000, eth->iobase + RAVB_REG_RCR);
 
@@ -484,7 +495,8 @@ static int ravb_config(struct udevice *dev)
 {
 	struct ravb_priv *eth = dev_get_priv(dev);
 	struct phy_device *phy = eth->phydev;
-#if !(defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV))
+#if !(defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || \
+	defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV) || defined(CONFIG_R9A08G045S) || defined(CONFIG_R9A08G046))
 	u32 mask = ECMR_CHG_DM | ECMR_RE | ECMR_TE;
 #endif
 	int ret;
@@ -496,7 +508,8 @@ static int ravb_config(struct udevice *dev)
 	ravb_mac_init(eth);
 	ravb_write_hwaddr(dev);
 
-#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV)
+#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || \
+	defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV) || defined(CONFIG_R9A08G045S) || defined(CONFIG_R9A08G046)
 	/* Configure TOE registers */
 	writel(CSR0_TPE | CSR0_RPE, eth->iobase + CSR0);
 #endif
@@ -506,7 +519,8 @@ static int ravb_config(struct udevice *dev)
 		return ret;
 
 	/* Set the transfer speed */
-#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV)
+#if defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || \
+	defined(CONFIG_R9A07G043U) || defined(CONFIG_RZF_DEV) || defined(CONFIG_R9A08G045S) || defined(CONFIG_R9A08G046)
 	if (phy->speed == 10)
 		writel(0, eth->iobase + RAVB_REG_GECMR);
 	else if (phy->speed == 100)
@@ -568,6 +582,7 @@ static int ravb_probe(struct udevice *dev)
 	struct ofnode_phandle_args phandle_args;
 	struct mii_dev *mdiodev;
 	void __iomem *iobase;
+	struct bb_miiphy_bus *phybus;
 	int ret;
 
 	iobase = map_physmem(pdata->iobase, 0x1000, MAP_NOCACHE);
@@ -596,7 +611,9 @@ static int ravb_probe(struct udevice *dev)
 
 	mdiodev->read = bb_miiphy_read;
 	mdiodev->write = bb_miiphy_write;
-	bb_miiphy_buses[0].priv = eth;
+	phybus = (struct bb_miiphy_bus *)pdata->priv_pdata;
+	phybus->priv = eth;
+
 	snprintf(mdiodev->name, sizeof(mdiodev->name), dev->name);
 
 	ret = mdio_register(mdiodev);
@@ -712,7 +729,17 @@ int ravb_bb_delay(struct bb_miiphy_bus *bus)
 
 struct bb_miiphy_bus bb_miiphy_buses[] = {
 	{
-		.name		= "ravb",
+		.name		= "ravb0",
+		.init		= ravb_bb_init,
+		.mdio_active	= ravb_bb_mdio_active,
+		.mdio_tristate	= ravb_bb_mdio_tristate,
+		.set_mdio	= ravb_bb_set_mdio,
+		.get_mdio	= ravb_bb_get_mdio,
+		.set_mdc	= ravb_bb_set_mdc,
+		.delay		= ravb_bb_delay,
+	},
+	{
+		.name		= "ravb1",
 		.init		= ravb_bb_init,
 		.mdio_active	= ravb_bb_mdio_active,
 		.mdio_tristate	= ravb_bb_mdio_tristate,
@@ -738,6 +765,10 @@ int ravb_of_to_plat(struct udevice *dev)
 	struct eth_pdata *pdata = dev_get_plat(dev);
 	const fdt32_t *cell;
 
+	struct ravb_data *data = (struct ravb_data *)dev_get_driver_data(dev);
+	const char *dev_name;
+	int i = 0;
+
 	pdata->iobase = dev_read_addr(dev);
 
 	pdata->phy_interface = dev_read_phy_mode(dev);
@@ -749,20 +780,59 @@ int ravb_of_to_plat(struct udevice *dev)
 	if (cell)
 		pdata->max_speed = fdt32_to_cpu(*cell);
 
-	sprintf(bb_miiphy_buses[0].name, dev->name);
+	if (data) {
+		dev_name = fdt_get_name(gd->fdt_blob, dev_of_offset(dev), NULL);
+		if (!strcmp(dev_name, data->eth1_dev_name))
+			i = 1;
+	}
+
+	pdata->priv_pdata = &bb_miiphy_buses[i];
+	sprintf(bb_miiphy_buses[i].name, dev->name);
 
 	return 0;
 }
 
+
+static const struct ravb_data rzg2l_data = {
+	.eth1_dev_name = "ethernet@11c30000",
+};
+
+static const struct ravb_data rzg3s_data = {
+	.eth1_dev_name = "ethernet@11c40000",
+};
+
+
 static const struct udevice_id ravb_ids[] = {
 	{ .compatible = "renesas,etheravb-rcar-gen3" },
 	{ .compatible = "renesas,etheravb-rcar-gen4" },
-	{ .compatible = "renesas,etheravb-r9a07g044l" },
-	{ .compatible = "renesas,etheravb-r9a07g044c" },
-	{ .compatible = "renesas,etheravb-r9a07g054l" },
-	{ .compatible = "renesas,etheravb-r9a07g043u" },
+	{ .compatible = "renesas,etheravb-r9a07g044l",
+	  .data = (ulong)&rzg2l_data,
+	},
+	{ .compatible = "renesas,r9a07g044-gbeth",
+	  .data = (ulong)&rzg2l_data,
+	},
+	{ .compatible = "renesas,r9a07g054-gbeth",
+	  .data = (ulong)&rzg2l_data,
+	},
+	{ .compatible = "renesas,r9a07g043-gbeth",
+	  .data = (ulong)&rzg2l_data,
+	},
+	{ .compatible = "renesas,etheravb-r9a07g044c",
+	  .data = (ulong)&rzg2l_data,
+	},
+	{ .compatible = "renesas,etheravb-r9a07g054l",
+	  .data = (ulong)&rzg2l_data,
+	},
+	{ .compatible = "renesas,etheravb-r9a07g043u",
+	  .data = (ulong)&rzg2l_data,
+	},
 	{ .compatible = "renesas,etheravb-rzv2m" },
-	{ .compatible = "renesas,etheravb-r9a07g043f" },
+	{ .compatible = "renesas,etheravb-r9a07g043f",
+	  .data = (ulong)&rzg2l_data,
+	},
+	{ .compatible = "renesas,etheravb-r9a08g045s",
+	  .data = (ulong)&rzg3s_data,
+	},
 	{ }
 };
 

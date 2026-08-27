@@ -35,10 +35,10 @@ extern u64 rcar_atf_boot_args[];
 
 static void apply_atf_overlay(void *fdt_blob)
 {
+#if !(defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || \
+defined(CONFIG_R9A07G043U) || defined(CONFIG_R9A09G047) || defined(CONFIG_R9A09G057) || defined(CONFIG_R9A09G056) || defined(CONFIG_R9A08G045S) || defined(CONFIG_R9A08G046))
 	void *atf_fdt_blob = (void *)(rcar_atf_boot_args[1]);
 
-#if !(defined(CONFIG_R9A07G044L) || defined(CONFIG_R9A07G044C) || defined(CONFIG_R9A07G054L) || \
-defined(CONFIG_R9A07G043U) || defined(CONFIG_R9A09G047) || defined(CONFIG_R9A09G057))
 	if (fdt_magic(atf_fdt_blob) == FDT_MAGIC)
 		fdt_overlay_apply_node(fdt_blob, 0, atf_fdt_blob, 0);
 #endif
@@ -66,7 +66,7 @@ int dram_init_banksize(void)
 	fdtdec_setup_memory_banksize();
 
 #if defined (CONFIG_TARGET_HIHOPE_RZG2)
-	if (rmobile_get_cpu_type() == RMOBILE_CPU_TYPE_R8A7795) {
+	if (renesas_get_cpu_type() == RENESAS_CPU_TYPE_R8A7795) {
 		/* Setting SiP Service GET_ECC_MODE command*/
 		regs.regs[0] = RZG_SIP_SVC_GET_ECC_MODE;
 		smc_call(&regs);

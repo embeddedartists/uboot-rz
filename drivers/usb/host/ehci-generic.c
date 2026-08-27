@@ -29,7 +29,7 @@ struct generic_ehci {
 	struct udevice *vbus_supply;
 };
 
-static int ehci_enable_vbus_supply(struct udevice *dev)
+__maybe_unused static int ehci_enable_vbus_supply(struct udevice *dev)
 {
 	struct generic_ehci *priv = dev_get_priv(dev);
 	int ret;
@@ -67,6 +67,7 @@ static int ehci_usb_probe(struct udevice *dev)
 	int err, ret;
 
 	err = 0;
+#if !defined(CONFIG_RCAR_GEN3) || defined(CONFIG_TARGET_HIHOPE_RZG2) || defined(CONFIG_TARGET_SILINUX_EK874)
 	ret = clk_get_bulk(dev, &priv->clocks);
 	if (ret && ret != -ENOENT) {
 		dev_err(dev, "Failed to get clocks (ret=%d)\n", ret);
@@ -79,7 +80,9 @@ static int ehci_usb_probe(struct udevice *dev)
 		goto clk_err;
 	}
 
+
 	err = reset_get_bulk(dev, &priv->resets);
+		printf("%s:  Error = %X\n", __func__, err);
 	if (err && err != -ENOENT) {
 		dev_err(dev, "Failed to get resets (err=%d)\n", err);
 		goto clk_err;
@@ -91,6 +94,7 @@ static int ehci_usb_probe(struct udevice *dev)
 		goto reset_err;
 	}
 
+
 	err = ehci_enable_vbus_supply(dev);
 	if (err)
 		goto reset_err;
@@ -98,7 +102,7 @@ static int ehci_usb_probe(struct udevice *dev)
 	err = generic_setup_phy(dev, &priv->phy, 0);
 	if (err)
 		goto regulator_err;
-
+#endif
 	hccr = map_physmem(dev_read_addr(dev), 0x100, MAP_NOCACHE);
 	hcor = (struct ehci_hcor *)((uintptr_t)hccr +
 				    HC_LENGTH(ehci_readl(&hccr->cr_capbase)));
@@ -114,11 +118,11 @@ phy_err:
 	if (ret)
 		dev_err(dev, "failed to shutdown usb phy (ret=%d)\n", ret);
 
+#if !defined(CONFIG_RCAR_GEN3) || defined(CONFIG_TARGET_HIHOPE_RZG2) || defined(CONFIG_TARGET_SILINUX_EK874)
 regulator_err:
 	ret = ehci_disable_vbus_supply(priv);
 	if (ret)
 		dev_err(dev, "failed to disable VBUS supply (ret=%d)\n", ret);
-
 reset_err:
 	ret = reset_release_bulk(&priv->resets);
 	if (ret)
@@ -127,6 +131,7 @@ clk_err:
 	ret = clk_release_bulk(&priv->clocks);
 	if (ret)
 		dev_err(dev, "failed to release clocks (ret=%d)\n", ret);
+#endif
 
 	return err;
 }
