@@ -96,6 +96,34 @@
 
 &i2c0 {
 	status = "okay";
+
+	pcal6524_u5: gpio@21 {
+		compatible = "nxp,pcal6524";
+		reg = <0x21>;
+		gpio-controller;
+		#gpio-cells = <2>;
+
+		gpio-line-names = "M2E_WL_REG_ON_3V3", "M2E_WL_DEV_WAKE", "M2E_WL_HOST_WAKE", "M2E_BT_REG_ON",
+			"M2E_BT_DEV_WAKE", "M2E_BT_HOST_WAKE", "M2E_SDIO_RST", "M2E_PERST",
+			"M2E_PEWAKE", "M2E_ALERT", "M2E_PWR_EN", "M2B_PWR_OFF",
+			"M2B_WDISABLE", "M2B_PEWAKE", "M2B_PERST", "M2M_PERST",
+			"M2M_PEWAKE", "M2BM_PWR_EN", "M2B_RESET", "SE050_EN_RST",
+			"SLS32AIA_RST", "I2C_EXT_IRQ", "I2C_EXT_RST", "MIPI_RST";
+
+	};
+
+	pcal6524_u6: gpio@23 {
+		compatible = "nxp,pcal6524";
+		reg = <0x23>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		gpio-line-names = "CSI0_RST-DATA", "CSI0_PWR-CLK", "CSI1_RST-DATA", "CSI1_PWR-CLK",
+			"MIPI_CTP_RST", "MIPI_CTP_IRQ", "RGB_BL_PWR", "RGB_CTP_RST",
+			"RGB_CTP_IRQ", "MIPI_BL_PWR_EN", "ADV_IRQ", "",
+			"", "", "", "RGB_LED_RED",
+			"RGB_LED_BLUE", "RGB_LED_GREEN", "USER_LED_RED", "USER_LED_GREEN",
+			"USER_LED_YELLOW", "USER_BUTTON1", "USER_BUTTON2", "USER_BUTTON3";
+	};
 };
 
 &i2c2 {
